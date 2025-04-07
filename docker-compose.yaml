@@ -1,0 +1,87 @@
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:latest
+    container_name: mqtt-broker
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    networks:
+      - app-net
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    networks:
+      - app-net
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUX_USER}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUX_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=tgcannabis
+      - DOCKER_INFLUXDB_INIT_BUCKET=sensor_data
+      - DOCKER_INFLUXDB_INIT_RETENTION=${INFLUX_RETENTION_TIME}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUX_TOKEN}
+
+  batch-processor:
+    build: ../Batch_Processor
+    container_name: batch-processor
+    depends_on:
+      - influxdb
+      - mqtt-broker
+    networks:
+      - app-net
+    environment:
+      # --- MQTT Broker Configuration ---
+      MQTT_BROKER: tcp://mqtt-broker:1883
+      MQTT_TOPIC_FILTER: ${MQTT_TOPIC_FILTER}
+
+      # --- InfluxDB Configuration ---
+      INFLUX_URL: http://influxdb:8086
+      INFLUX_TOKEN: ${INFLUX_TOKEN}
+      INFLUX_ORG: tgcannabis
+      INFLUX_BUCKET: sensor_data
+
+      # --- Kafka Configuration ---
+      KAFKA_BROKERS: ${KAFKA_BROKERS}
+      KAFKA_TOPIC: ${KAFKA_TOPIC}
+
+  edge-alerts:
+    build: ../Edge_Alerts
+    container_name: edge-alerts
+    depends_on:
+      - mqtt-broker
+    networks:
+      - app-net
+    environment:
+      # --- MQTT Broker Configuration ---
+      MQTT_BROKER: tcp://mqtt-broker:1883
+      MQTT_TOPIC_FILTER: ${MQTT_TOPIC_FILTER}
+
+  iot-component:
+    build: ../IoT_Component
+    container_name: iot-component
+    depends_on:
+      - mqtt-broker
+    networks:
+      - app-net
+    environment:
+      MQTT_BROKER: tcp://mqtt-broker:1883
+      MQTT_PUBLISHER_ID: ${SIM_MQTT_PUBLISHER_ID}
+      MQTT_TOPIC: sensors/data
+
+networks:
+  app-net:
+    driver: bridge
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
+  influxdb_data:
