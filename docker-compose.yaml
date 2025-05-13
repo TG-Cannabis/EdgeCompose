@@ -73,9 +73,22 @@ services:
     networks:
       - app-net
     environment:
+      # MQTT Publishing configuration
       MQTT_BROKER: tcp://mqtt-broker:1883
       MQTT_PUBLISHER_ID: ${SIM_MQTT_PUBLISHER_ID}
       MQTT_TOPIC: sensors/data
+
+      # Sensor Simulation Configuration
+      SIM_SENSOR_TYPES: ${SIM_SENSOR_TYPES}
+      SIM_LOCATIONS: ${SIM_LOCATIONS}
+      SIM_FAIL_PROB: ${SIM_FAIL_PROB}
+
+      # Sensor Value Ranges
+      SIM_TEMPERATURE_RANGE: ${SIM_TEMPERATURE_RANGE}
+      SIM_HUMIDITY_RANGE: ${SIM_HUMIDITY_RANGE}
+      SIM_CO2_RANGE: ${SIM_CO2_RANGE}
+      SIM_LIGHT_RANGE: ${SIM_LIGHT_RANGE}
+
 
 networks:
   app-net:
