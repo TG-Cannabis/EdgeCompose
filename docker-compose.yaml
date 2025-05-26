@@ -30,6 +30,29 @@ services:
       - DOCKER_INFLUXDB_INIT_RETENTION=${INFLUX_RETENTION_TIME}
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUX_TOKEN}
 
+  edge-hub:
+    build: ../EdgeHub
+    container_name: edge-hub
+    ports:
+      - "8085:8085"
+    depends_on:
+      - influxdb
+      - mqtt-broker
+    networks:
+      - app-net
+    environment:
+      # --- MQTT Broker Configuration ---
+      MQTT_BROKER: tcp://mqtt-broker:1883
+      MQTT_CLIENT: edge-hub-client
+      MQTT_TOPICS: sensors/#,alerts
+
+      # --- InfluxDB Configuration ---
+      INFLUX_URL: http://influxdb:8086
+      INFLUX_BUCKET: sensor_data
+      INFLUX_TOKEN: ${INFLUX_TOKEN}
+      INFLUX_ORG: tgcannabis
+      INIT_DATA_MINUTES: 60
+
   batch-processor:
     build: ../Batch_Processor
     container_name: batch-processor
